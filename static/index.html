@@ -1022,10 +1022,19 @@ async function roastIt() {
       body: formData,
     });
 
-    const data = await res.json();
+    const rawText = await res.text();
 
     if (!res.ok) {
-      throw new Error(data.detail || 'Analysis failed');
+      let errMsg = 'Analysis failed. Please try again.';
+      try { errMsg = JSON.parse(rawText).detail || errMsg; } catch(e) {}
+      throw new Error(errMsg);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch(e) {
+      throw new Error('Server error. Please try again.');
     }
 
     stopLoading();
