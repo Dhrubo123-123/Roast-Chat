@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoastChat — Your chats are judging you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fire: #FF3D00;
+    --fire2: #FF6B00;
+    --yellow: #FFD600;
+    --bg: #0A0A0A;
+    --bg2: #111111;
+    --bg3: #1A1A1A;
+    --border: #2A2A2A;
+    --text: #F0F0F0;
+    --muted: #888;
+    --green: #00E676;
+    --red: #FF1744;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* Scrolling ticker tape top */
+  .ticker {
+    background: var(--fire);
+    color: #000;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 6px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    z-index: 10;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: scroll-left 25s linear infinite;
+  }
+  .ticker-inner span { margin: 0 32px; }
+  @keyframes scroll-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 1;
+    padding: 60px 24px 40px;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(72px, 15vw, 128px);
+    line-height: 0.9;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, var(--fire) 0%, var(--yellow) 50%, var(--fire2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    display: inline-block;
+  }
+
+  .logo::after {
+    content: 'ROASTCHAT';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--fire) 0%, var(--yellow) 50%, var(--fire2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(20px);
+    opacity: 0.4;
+    z-index: -1;
+  }
+
+  .tagline {
+    font-family: 'Space Mono', monospace;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--fire);
+    color: #000;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 4px 12px;
+    margin-top: 20px;
+  }
+
+  /* Upload section */
+  .upload-section {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* Type selector */
+  .type-selector {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+
+  .type-btn {
+    flex: 1;
+    padding: 14px;
+    background: var(--bg2);
+    border: none;
+    color: var(--muted);
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-right: 1px solid var(--border);
+  }
+  .type-btn:last-child { border-right: none; }
+  .type-btn.active {
+    background: var(--fire);
+    color: #000;
+  }
+  .type-btn:hover:not(.active) {
+    background: var(--bg3);
+    color: var(--text);
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    background: var(--bg2);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--fire), var(--yellow));
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 0;
+  }
+
+  .drop-zone::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: var(--bg2);
+    z-index: 1;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--fire);
+  }
+  .drop-zone:hover::before, .drop-zone.drag-over::before {
+    opacity: 1;
+  }
+
+  .drop-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .drop-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .drop-sub {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .drop-sub code {
+    background: var(--bg3);
+    padding: 2px 6px;
+    color: var(--yellow);
+    font-size: 11px;
+  }
+
+  #file-input { display: none; }
+
+  /* How to export */
+  .how-to {
+    margin-top: 16px;
+    background: var(--bg3);
+    border-left: 3px solid var(--fire);
+    padding: 16px 20px;
+  }
+
+  .how-to-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--fire);
+    margin-bottom: 10px;
+  }
+
+  .how-to ol {
+    list-style: none;
+    counter-reset: steps;
+  }
+
+  .how-to ol li {
+    counter-increment: steps;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    line-height: 1.5;
+  }
+
+  .how-to ol li::before {
+    content: counter(steps);
+    background: var(--fire);
+    color: #000;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* CTA Button */
+  .roast-btn {
+    width: 100%;
+    margin-top: 24px;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--fire), var(--fire2));
+    border: none;
+    color: #000;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 6px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .roast-btn.visible { display: block; }
+  .roast-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,61,0,0.4); }
+  .roast-btn:active { transform: translateY(0); }
+
+  .roast-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    100% { left: 100%; }
+  }
+
+  .file-selected {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    margin-top: 16px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+  }
+  .file-selected.visible { display: flex; }
+  .file-name { color: var(--green); font-weight: 700; }
+  .file-remove { margin-left: auto; color: var(--red); cursor: pointer; font-size: 18px; line-height: 1; }
+
+  /* Loading */
+  #loading {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+  }
+  #loading.show { display: flex; }
+
+  .loading-fire {
+    font-size: 64px;
+    animation: burn 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes burn {
+    from { transform: scale(1) rotate(-3deg); filter: brightness(1); }
+    to { transform: scale(1.1) rotate(3deg); filter: brightness(1.3); }
+  }
+
+  .loading-msg {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--fire);
+    text-align: center;
+    min-height: 40px;
+    transition: opacity 0.4s;
+  }
+
+  .loading-bar {
+    width: 280px;
+    height: 3px;
+    background: var(--bg3);
+    position: relative;
+    overflow: hidden;
+  }
+  .loading-bar::after {
+    content: '';
+    position: absolute;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--fire), var(--yellow));
+    animation: load-sweep 1.5s ease-in-out infinite;
+  }
+  @keyframes load-sweep {
+    to { left: 160%; }
+  }
+
+  /* Results */
+  #results {
+    display: none;
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+  #results.show { display: block; }
+
+  /* Risk score hero */
+  .risk-hero {
+    text-align: center;
+    padding: 48px 32px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .risk-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(255,61,0,0.08) 0%, transparent 70%);
+  }
+
+  .risk-label-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .risk-score-big {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(96px, 20vw, 160px);
+    line-height: 1;
+    position: relative;
+    display: inline-block;
+  }
+
+  .risk-score-big span {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 40px;
+    vertical-align: top;
+    margin-top: 20px;
+    display: inline-block;
+  }
+
+  .risk-verdict {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(18px, 4vw, 26px);
+    line-height: 1.2;
+    margin-top: 16px;
+    letter-spacing: -0.5px;
+  }
+
+  .risk-headline {
+    font-family: 'Space Mono', monospace;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 10px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+  }
+
+  /* Score bar */
+  .score-bar-wrap {
+    margin-top: 24px;
+    padding: 0 16px;
+  }
+  .score-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-family: 'Bebas Neue', cursive;
+  }
+  .score-bar-bg {
+    height: 8px;
+    background: var(--bg3);
+    position: relative;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--yellow), var(--red));
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+  .score-bar-needle {
+    position: absolute;
+    top: -4px;
+    width: 3px;
+    height: 16px;
+    background: #fff;
+    transform: translateX(-50%);
+    transition: left 1.5s cubic-bezier(0.4,0,0.2,1);
+    left: 0%;
+  }
+
+  /* Opening roast */
+  .opening-roast {
+    background: var(--bg2);
+    border-left: 4px solid var(--fire);
+    padding: 28px 28px;
+    margin-bottom: 24px;
+    font-size: 15px;
+    line-height: 1.8;
+    font-style: italic;
+    position: relative;
+  }
+
+  .opening-roast::before {
+    content: '"';
+    font-family: 'Bebas Neue', cursive;
+    font-size: 80px;
+    color: var(--fire);
+    opacity: 0.3;
+    position: absolute;
+    top: -8px;
+    left: 16px;
+    line-height: 1;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+
+  .stat-card-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .stat-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stat-bar-item { display: flex; align-items: center; gap: 10px; }
+  .stat-bar-name { font-size: 11px; color: var(--muted); width: 60px; truncate: true; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .stat-bar-track { flex: 1; height: 6px; background: var(--bg3); position: relative; }
+  .stat-bar-fill { height: 100%; transition: width 1.2s; width: 0%; }
+  .stat-bar-fill.p1 { background: var(--fire); }
+  .stat-bar-fill.p2 { background: var(--yellow); }
+  .stat-pct { font-family: 'Bebas Neue', cursive; font-size: 16px; min-width: 36px; text-align: right; }
+
+  /* Red flags */
+  .section-header {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    letter-spacing: 5px;
+    color: var(--fire);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .flags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .flag-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 14px 16px;
+    font-size: 13px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+
+  .flag-icon { flex-shrink: 0; font-size: 16px; }
+
+  /* Insights */
+  .insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .insight-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow);
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Brutal truth */
+  .brutal-truth {
+    background: #1a0000;
+    border: 1px solid #400000;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .brutal-truth p {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #ffcccc;
+  }
+
+  /* Roast lines */
+  .roast-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+
+  .roast-line {
+    padding: 16px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-style: italic;
+    border-bottom: 1px solid var(--border);
+    color: var(--yellow);
+    transition: background 0.2s;
+  }
+  .roast-line:last-child { border-bottom: none; }
+  .roast-line:hover { background: var(--bg3); }
+
+  /* Silver lining */
+  .silver-lining {
+    background: #001a0a;
+    border: 1px solid #004020;
+    border-left: 3px solid var(--green);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+  }
+
+  .silver-lining-label {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+
+  .silver-lining p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #99ffcc;
+  }
+
+  /* Share section */
+  .share-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .share-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 14px 20px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .share-btn.primary {
+    background: var(--fire);
+    color: #000;
+  }
+  .share-btn.secondary {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .share-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  /* New analysis */
+  .new-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 32px;
+  }
+  .new-btn:hover { border-color: var(--fire); color: var(--fire); }
+
+  /* Privacy note */
+  .privacy-note {
+    text-align: center;
+    font-size: 11px;
+    color: #444;
+    letter-spacing: 1px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Error */
+  .error-msg {
+    background: #1a0000;
+    border: 1px solid var(--red);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #ff8080;
+    display: none;
+    margin-top: 16px;
+  }
+  .error-msg.show { display: block; }
+
+  /* Animations */
+  .fade-in {
+    animation: fade-in 0.5s ease forwards;
+    opacity: 0;
+  }
+  @keyframes fade-in {
+    to { opacity: 1; }
+  }
+
+  .slide-up {
+    animation: slide-up 0.6s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  @keyframes slide-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ticker -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span>🔥 YOUR CHAT IS ABOUT TO GET ROASTED</span>
+    <span>📉 IS SOMEONE LOSING INTEREST?</span>
+    <span>👀 85% INITIATION RATE IS NOT A VIBE</span>
+    <span>💀 WE FOUND YOUR RED FLAGS</span>
+    <span>🚩 UNANSWERED QUESTIONS DETECTED</span>
+    <span>🔥 YOUR CHAT IS ABOUT TO GET ROASTED</span>
+    <span>📉 IS SOMEONE LOSING INTEREST?</span>
+    <span>👀 85% INITIATION RATE IS NOT A VIBE</span>
+    <span>💀 WE FOUND YOUR RED FLAGS</span>
+    <span>🚩 UNANSWERED QUESTIONS DETECTED</span>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="logo">RoastChat</div>
+  <div class="tagline">Your WhatsApp chat is judging you harder than your ex.</div>
+  <div class="badge">🔥 BRUTALLY HONEST · PSYCHOLOGICALLY SHARP · PAINFULLY REAL</div>
+</div>
+
+<!-- Upload -->
+<div class="upload-section" id="upload-section">
+  <!-- Chat type selector -->
+  <div class="type-selector">
+    <button class="type-btn active" data-type="relationship" onclick="selectType(this)">💔 RELATIONSHIP</button>
+    <button class="type-btn" data-type="work" onclick="selectType(this)">💼 WORK / BOSS</button>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="drop-content">
+      <span class="drop-icon">📱</span>
+      <div class="drop-title">Drop your WhatsApp .txt file here</div>
+      <div class="drop-sub">
+        Your file never leaves your device except for AI analysis.<br>
+        Not stored. Not shared. <code>100% private.</code>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="file-input" accept=".txt" onchange="handleFile(event)">
+
+  <!-- File selected indicator -->
+  <div class="file-selected" id="file-selected">
+    <span>📄</span>
+    <span class="file-name" id="file-name">chat.txt</span>
+    <span class="file-remove" onclick="clearFile()">×</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-msg" id="error-msg"></div>
+
+  <!-- How to export -->
+  <div class="how-to" style="margin-top:20px;">
+    <div class="how-to-title">How to export from WhatsApp</div>
+    <ol>
+      <li>Open the chat you want to roast on WhatsApp</li>
+      <li>Tap the contact/group name at top → ⋮ More → Export Chat</li>
+      <li>Choose <strong>"Without Media"</strong> → Save to Files / Downloads</li>
+      <li>Upload that .txt file here → Get destroyed</li>
+    </ol>
+  </div>
+
+  <!-- CTA button -->
+  <button class="roast-btn" id="roast-btn" onclick="roastIt()">
+    🔥 ROAST IT BRUTALLY 🔥
+  </button>
+</div>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="loading-fire">🔥</div>
+  <div class="loading-msg" id="loading-msg">READING YOUR SINS...</div>
+  <div class="loading-bar"></div>
+</div>
+
+<!-- Results -->
+<div id="results">
+  <!-- Risk hero -->
+  <div class="risk-hero fade-in">
+    <div class="risk-label-text">RELATIONSHIP RISK SCORE</div>
+    <div class="risk-score-big" id="risk-score-display" style="color: var(--fire)">
+      0<span>%</span>
+    </div>
+    <div class="risk-verdict" id="risk-verdict-text"></div>
+    <div class="risk-headline" id="risk-headline-text"></div>
+    <div class="score-bar-wrap">
+      <div class="score-bar-labels">
+        <span>HEALTHY</span>
+        <span>CONCERNING</span>
+        <span>RED ALERT</span>
+      </div>
+      <div class="score-bar-bg">
+        <div class="score-bar-fill" id="score-bar-fill"></div>
+        <div class="score-bar-needle" id="score-bar-needle"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Opening roast -->
+  <div class="opening-roast slide-up" id="opening-roast-text" style="animation-delay:0.1s"></div>
+
+  <!-- Stats grid -->
+  <div class="stats-grid slide-up" style="animation-delay:0.2s">
+    <div class="stat-card">
+      <div class="stat-card-title">MESSAGE SHARE</div>
+      <div class="stat-bar-row" id="msg-share-bars"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">WORD EFFORT</div>
+      <div class="stat-bar-row" id="word-effort-bars"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">SHORT REPLIES (%)</div>
+      <div class="stat-bar-row" id="short-reply-bars"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">QUESTIONS ASKED</div>
+      <div class="stat-bar-row" id="questions-bars"></div>
+    </div>
+  </div>
+
+  <!-- Roast lines -->
+  <div class="section-header slide-up" style="animation-delay:0.25s">⚡ QUICK HITS</div>
+  <div class="roast-lines slide-up" id="roast-lines-list" style="animation-delay:0.3s"></div>
+
+  <!-- Red flags -->
+  <div class="section-header slide-up" style="animation-delay:0.35s">🚩 RED FLAGS</div>
+  <div class="flags-list slide-up" id="flags-list" style="animation-delay:0.4s"></div>
+
+  <!-- Patterns -->
+  <div class="section-header slide-up" style="animation-delay:0.45s">🧠 PATTERN ANALYSIS</div>
+  <div class="insights-list slide-up" id="insights-list" style="animation-delay:0.5s"></div>
+
+  <!-- Brutal truth -->
+  <div class="section-header slide-up" style="animation-delay:0.55s">💀 THE BRUTAL TRUTH</div>
+  <div class="brutal-truth slide-up" style="animation-delay:0.6s">
+    <p id="brutal-truth-text"></p>
+  </div>
+
+  <!-- Silver lining -->
+  <div class="silver-lining slide-up" style="animation-delay:0.65s">
+    <div class="silver-lining-label">✅ SILVER LINING</div>
+    <p id="silver-lining-text"></p>
+  </div>
+
+  <!-- Share -->
+  <div class="share-bar slide-up" style="animation-delay:0.7s">
+    <button class="share-btn primary" onclick="copyResults()">📋 COPY ROAST</button>
+    <button class="share-btn secondary" onclick="shareWhatsApp()">💬 SHARE ON WHATSAPP</button>
+  </div>
+
+  <!-- New analysis -->
+  <button class="new-btn" onclick="resetAll()">↩ ROAST ANOTHER CHAT</button>
+
+  <div class="privacy-note">🔒 Your chat is processed & immediately discarded. Never stored. Never logged.</div>
+</div>
+
+<script>
+let selectedFile = null;
+let selectedType = 'relationship';
+let currentStats = null;
+let currentRoast = null;
+
+function selectType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedType = btn.dataset.type;
+}
+
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (file) setFile(file);
+}
+
+function setFile(file) {
+  selectedFile = file;
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-selected').classList.add('visible');
+  document.getElementById('roast-btn').classList.add('visible');
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+function clearFile() {
+  selectedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-selected').classList.remove('visible');
+  document.getElementById('roast-btn').classList.remove('visible');
+}
+
+// Drag & drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.txt')) setFile(file);
+  else showError('Please drop a .txt WhatsApp export file.');
+});
+
+const loadingMessages = [
+  'READING YOUR SINS...',
+  'COUNTING RED FLAGS...',
+  'ANALYZING DESPERATION...',
+  'CALCULATING BACKUP PLAN STATUS...',
+  'EXPOSING DOUBLE TEXTS...',
+  'DETECTING BREADCRUMBING...',
+  'ROASTING IN PROGRESS...',
+  'PULLING NO PUNCHES...',
+];
+
+let loadingInterval;
+let msgIndex = 0;
+
+function startLoadingMessages() {
+  msgIndex = 0;
+  document.getElementById('loading-msg').textContent = loadingMessages[0];
+  loadingInterval = setInterval(() => {
+    msgIndex = (msgIndex + 1) % loadingMessages.length;
+    const el = document.getElementById('loading-msg');
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = loadingMessages[msgIndex];
+      el.style.opacity = '1';
+    }, 200);
+  }, 1200);
+}
+
+function stopLoading() {
+  clearInterval(loadingInterval);
+  document.getElementById('loading').classList.remove('show');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('show');
+}
+
+async function roastIt() {
+  if (!selectedFile) return;
+
+  document.getElementById('error-msg').classList.remove('show');
+  document.getElementById('loading').classList.add('show');
+  startLoadingMessages();
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('chat_type', selectedType);
+
+  try {
+    const res = await fetch('/analyze?chat_type=' + selectedType, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || 'Analysis failed');
+    }
+
+    stopLoading();
+    renderResults(data.stats, data.roast);
+
+  } catch (err) {
+    stopLoading();
+    showError(err.message || 'Something went wrong. Please try again.');
+  }
+}
+
+function animateNumber(el, target, duration = 1500) {
+  const start = performance.now();
+  function update(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.childNodes[0].textContent = Math.round(ease * target);
+    if (p < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+function renderResults(stats, roast) {
+  currentStats = stats;
+  currentRoast = roast;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Hide upload, show results
+  document.getElementById('upload-section').style.display = 'none';
+  const resultsEl = document.getElementById('results');
+  resultsEl.classList.add('show');
+
+  // Risk label
+  const riskLabel = document.querySelector('.risk-label-text');
+  riskLabel.textContent = stats.chat_type === 'work' ? 'WORKPLACE RISK SCORE' : 'RELATIONSHIP RISK SCORE';
+
+  // Risk score
+  const scoreEl = document.getElementById('risk-score-display');
+  const score = stats.risk_score;
+
+  // Color based on score
+  let scoreColor = score > 70 ? 'var(--red)' : score > 45 ? 'var(--yellow)' : 'var(--green)';
+  scoreEl.style.color = scoreColor;
+
+  animateNumber(scoreEl, score);
+
+  // Score bar
+  setTimeout(() => {
+    document.getElementById('score-bar-fill').style.width = score + '%';
+    document.getElementById('score-bar-needle').style.left = score + '%';
+  }, 300);
+
+  // Verdict
+  document.getElementById('risk-verdict-text').textContent = roast.risk_label || '';
+  document.getElementById('risk-headline-text').textContent = roast.headline || '';
+
+  // Opening roast
+  document.getElementById('opening-roast-text').textContent = roast.opening_roast || '';
+
+  // Stats bars
+  renderBarRow('msg-share-bars', [
+    { name: truncName(stats.p1), val: stats.p1_pct, cls: 'p1' },
+    { name: truncName(stats.p2), val: stats.p2_pct, cls: 'p2' },
+  ]);
+
+  const maxWords = Math.max(stats.p1_words, stats.p2_words);
+  renderBarRow('word-effort-bars', [
+    { name: truncName(stats.p1), val: Math.round(stats.p1_words / maxWords * 100), cls: 'p1', display: stats.p1_words + ' words' },
+    { name: truncName(stats.p2), val: Math.round(stats.p2_words / maxWords * 100), cls: 'p2', display: stats.p2_words + ' words' },
+  ]);
+
+  renderBarRow('short-reply-bars', [
+    { name: truncName(stats.p1), val: stats.p1_short_pct, cls: 'p1', display: stats.p1_short_pct + '%' },
+    { name: truncName(stats.p2), val: stats.p2_short_pct, cls: 'p2', display: stats.p2_short_pct + '%' },
+  ]);
+
+  const maxQ = Math.max(stats.p1_questions, stats.p2_questions, 1);
+  renderBarRow('questions-bars', [
+    { name: truncName(stats.p1), val: Math.round(stats.p1_questions / maxQ * 100), cls: 'p1', display: stats.p1_questions },
+    { name: truncName(stats.p2), val: Math.round(stats.p2_questions / maxQ * 100), cls: 'p2', display: stats.p2_questions },
+  ]);
+
+  // Roast lines
+  const roastLinesList = document.getElementById('roast-lines-list');
+  roastLinesList.innerHTML = '';
+  (roast.roast_lines || []).forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'roast-line';
+    div.textContent = '→ ' + line;
+    roastLinesList.appendChild(div);
+  });
+
+  // Red flags
+  const flagsList = document.getElementById('flags-list');
+  flagsList.innerHTML = '';
+  const flagIcons = ['🚩', '⚠️', '🔴', '💀'];
+  (roast.red_flags || []).forEach((flag, i) => {
+    const div = document.createElement('div');
+    div.className = 'flag-item';
+    div.innerHTML = `<span class="flag-icon">${flagIcons[i % flagIcons.length]}</span><span>${flag}</span>`;
+    flagsList.appendChild(div);
+  });
+
+  // Insights
+  const insightsList = document.getElementById('insights-list');
+  insightsList.innerHTML = '';
+  const insightIcons = ['🧠', '📊', '🔍'];
+  (roast.pattern_insights || []).forEach((insight, i) => {
+    const div = document.createElement('div');
+    div.className = 'insight-item';
+    div.innerHTML = `<span class="flag-icon">${insightIcons[i % insightIcons.length]}</span><span>${insight}</span>`;
+    insightsList.appendChild(div);
+  });
+
+  // Brutal truth
+  document.getElementById('brutal-truth-text').textContent = roast.brutal_truth || '';
+
+  // Silver lining
+  document.getElementById('silver-lining-text').textContent = roast.silver_lining || '';
+}
+
+function renderBarRow(containerId, items) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'stat-bar-item';
+    row.innerHTML = `
+      <span class="stat-bar-name" title="${item.name}">${item.name}</span>
+      <div class="stat-bar-track">
+        <div class="stat-bar-fill ${item.cls}" style="width:0%" data-target="${item.val}"></div>
+      </div>
+      <span class="stat-pct">${item.display !== undefined ? item.display : item.val + '%'}</span>
+    `;
+    container.appendChild(row);
+  });
+
+  // Animate bars
+  setTimeout(() => {
+    container.querySelectorAll('.stat-bar-fill').forEach(bar => {
+      bar.style.width = bar.dataset.target + '%';
+    });
+  }, 400);
+}
+
+function truncName(name) {
+  return name.length > 10 ? name.slice(0, 9) + '…' : name;
+}
+
+function copyResults() {
+  if (!currentRoast || !currentStats) return;
+  const text = `🔥 ROASTCHAT RESULTS 🔥
+  
+Risk Score: ${currentStats.risk_score}%
+Verdict: ${currentRoast.risk_label}
+
+${currentRoast.opening_roast}
+
+Red Flags:
+${(currentRoast.red_flags || []).map(f => '🚩 ' + f).join('\n')}
+
+The Brutal Truth:
+${currentRoast.brutal_truth}
+
+Generated at roastchat.in`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ COPIED!';
+    setTimeout(() => btn.textContent = '📋 COPY ROAST', 2000);
+  });
+}
+
+function shareWhatsApp() {
+  if (!currentRoast || !currentStats) return;
+  const text = encodeURIComponent(
+    `💀 My chat got ROASTED\n\nRisk Score: ${currentStats.risk_score}% — "${currentRoast.risk_label}"\n\n${currentRoast.roast_lines?.[0] || ''}\n\nGet yours: roastchat.in 🔥`
+  );
+  window.open('https://wa.me/?text=' + text, '_blank');
+}
+
+function resetAll() {
+  selectedFile = null;
+  currentStats = null;
+  currentRoast = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-selected').classList.remove('visible');
+  document.getElementById('roast-btn').classList.remove('visible');
+  document.getElementById('error-msg').classList.remove('show');
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('upload-section').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
