@@ -18,34 +18,27 @@ app.add_middleware(
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
-# 1. THE FIX: Serve your actual index.html file on the root URL
+# THE LINK: This serves your HTML file directly at https://roast-chat.onrender.com
 @app.get("/")
 async def home():
-    # This looks for index.html in your 'static' folder and serves it as the UI
     return FileResponse("static/index.html")
 
-# 2. PARSER: Fixed for bracket format [14/08/16] and narrow-space \u202f
+# THE PARSER: Fixed for bracket format and narrow-space character found in your chat
 def parse_whatsapp_chat(text: str):
     pattern = r'\[(\d{1,2}/\d{1,2}/\d{2,4}),\s+(\d{1,2}:\d{2}(?::\d{2})?[\s\u202f]?[AP]M)\]\s*([^:]+?):\s*(.*)'
-    
     messages = []
     current_msg = None
     
     for line in text.split('\n'):
         line = line.strip()
         if not line: continue
-        
         m = re.match(pattern, line)
         if m:
-            if current_msg:
-                messages.append(current_msg)
-            
+            if current_msg: messages.append(current_msg)
             date_str, time_str, sender, content = m.groups()
-            
             if any(x in content for x in ["Messages and calls", "created", "added", "omitted"]):
                 current_msg = None
                 continue
-                
             current_msg = {
                 'sender': sender.strip(),
                 'content': content.strip(),
@@ -54,20 +47,17 @@ def parse_whatsapp_chat(text: str):
         elif current_msg:
             current_msg['content'] += ' ' + line
 
-    if current_msg:
-        messages.append(current_msg)
+    if current_msg: messages.append(current_msg)
     return messages
 
-# 3. STATS: Fixed Regex range crash for Python 3.14
+# THE STATS: Fixed the regex crash (bad character range) for Python 3.14
 def get_chat_stats(messages):
     sender_counts = Counter(m['sender'] for m in messages)
     top_senders = sender_counts.most_common(2)
-    
     if not top_senders: return None
     
     p1 = top_senders[0][0]
     p2 = top_senders[1][0] if len(top_senders) > 1 else "The Ghost"
-    
     p1_msgs = [m['content'] for m in messages if m['sender'] == p1]
     link_count = sum(1 for c in p1_msgs if "http" in c or "x.com" in c)
     
@@ -79,10 +69,10 @@ def get_chat_stats(messages):
         "p1_link_spam": link_count,
         "emoji_count": emoji_total,
         "total_msgs": len(messages),
-        "risk_score": 75 if link_count > 10 else 40
+        "risk_score": 80 if link_count > 10 else 45
     }
 
-# 4. ROAST: Desi Savage Personality
+# THE ROAST: The Savage Boy Next Door Personality
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
     if not GROQ_API_KEY:
@@ -95,8 +85,8 @@ async def analyze(file: UploadFile = File(...)):
         text = content.decode('latin-1')
         
     messages = parse_whatsapp_chat(text)
-    if len(messages) < 10:
-        raise HTTPException(400, "Too few messages found.")
+    if len(messages) < 5:
+        raise HTTPException(400, "Too few messages to roast.")
 
     stats = get_chat_stats(messages)
     
